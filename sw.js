@@ -1,4 +1,4 @@
-const CACHE = "nwgeo-muestreo-v5";
+const CACHE = "nwgeo-muestreo-v6";
 const ASSETS = [
   "./",
   "./index.html",

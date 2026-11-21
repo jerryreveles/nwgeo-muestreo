@@ -475,10 +475,26 @@ function loadPreset(claveNivel, claveTile) {
   };
   state.nivelActivo = nivelActivoDesdeClavePreset(claveNivel);
   pintarNivelActivoUI();
+  agregarNivelANota(state.nivelActivo);
   save();
   mostrarPlano();
   switchTab("mapa");
   pintarFolioEstadoTramo();
+}
+
+// Agrega el nivel activo a la nota informativa "Niveles del proyecto" si todavía no está ahí
+// (p. ej. "02, 04, 06" → "02, 04, 06, 08"), para que esa lista se vaya completando sola conforme
+// se van muestreando niveles, sin dejar de ser editable a mano.
+function agregarNivelANota(nivelActivo) {
+  const etiqueta = nivelActivo.modo === "SUP" ? "Superficie" : pad2(nivelActivo.num);
+  const actual = (state.proyecto.nivel || "").trim();
+  const partes = actual ? actual.split(",").map(s => s.trim()).filter(Boolean) : [];
+  if (!partes.some(p => p.toLowerCase() === etiqueta.toLowerCase())) {
+    partes.push(etiqueta);
+    state.proyecto.nivel = partes.join(", ");
+    const campo = document.getElementById("pNivel");
+    if (campo) campo.value = state.proyecto.nivel;
+  }
 }
 
 function switchTab(name) {
