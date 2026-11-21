@@ -400,37 +400,66 @@ document.getElementById("btnGuardaProy").addEventListener("click", () => {
 document.getElementById("projLine").textContent =
   (state.proyecto.proyecto || "") + (state.proyecto.nivel ? (" · Nivel " + state.proyecto.nivel) : "");
 
-// ---------- plano: preset Nivel 04 ----------
-let NIVEL04 = null;
-fetch("assets/nivel04_manifest.json").then(r => r.json()).then(j => { NIVEL04 = j; buildPresetButtons(); }).catch(() => {});
+// ---------- plano: niveles precargados (todos los niveles digitalizados + superficie) ----------
+// NIVELES viene de assets/niveles_manifest.json: un bloque por nivel (NIVEL02..NIVEL09) y uno
+// para SUPERFICIE (ortomosaico de dron). Cada bloque trae su propio objeto "tiles" (uno o más
+// tramos/planchas ya calibrados pixel<->UTM); el Nivel 04 es el único con varios tramos
+// históricos escaneados (A1-B3) además del plano completo — los demás traen solo "FULL",
+// un facsímil vectorial limpio generado de la digitalización SHP del nivel.
+const NIVEL_LABEL = {
+  NIVEL02: "Nivel 02", NIVEL03: "Nivel 03", NIVEL04: "Nivel 04", NIVEL05: "Nivel 05",
+  NIVEL06: "Nivel 06", NIVEL07: "Nivel 07", NIVEL08: "Nivel 08", NIVEL09: "Nivel 09",
+  SUPERFICIE: "Superficie (ortomosaico dron)",
+};
+const NIVEL_ORDEN = ["NIVEL02", "NIVEL03", "NIVEL04", "NIVEL05", "NIVEL06", "NIVEL07", "NIVEL08", "NIVEL09", "SUPERFICIE"];
+
+let NIVELES = null;
+fetch("assets/niveles_manifest.json").then(r => r.json()).then(j => { NIVELES = j; buildPresetButtons(); }).catch(() => {});
 
 function buildPresetButtons() {
-  if (!NIVEL04) return;
+  if (!NIVELES) return;
   const card = document.createElement("div");
   card.className = "card";
-  card.innerHTML = "<h3>Nivel 04 — tramos precargados</h3>" +
-    "<p class=\"muted\">Ya vienen calibrados: no hace falta marcar puntos de control. Elige el tramo que vas a muestrear.</p>" +
-    "<div id=\"presetBtns\" style=\"display:flex;flex-wrap:wrap;gap:8px;\"></div>";
+  card.innerHTML = "<h3>Niveles precargados</h3>" +
+    "<p class=\"muted\">Ya vienen calibrados: no hace falta marcar puntos de control. Elige primero el nivel " +
+    "(o Superficie) y luego el tramo/plancha que vas a muestrear. El Nivel 04 trae además los 6 tramos " +
+    "históricos escaneados (A1-B3) junto con su plano completo.</p>" +
+    "<div id=\"nivelesWrap\"></div>";
   document.querySelector("#screen-proyecto .panel").insertBefore(
     card, document.querySelector("#screen-proyecto .panel .card:nth-child(2)")
   );
-  const wrap = card.querySelector("#presetBtns");
-  Object.keys(NIVEL04.tiles).forEach(clave => {
-    const t = NIVEL04.tiles[clave];
-    const b = document.createElement("button");
-    b.className = "btn-ghost btn-sm";
-    b.textContent = clave === "FULL" ? "Plano completo" : ("Tramo " + clave);
-    if (clave === "FULL") { b.style.background = "#2c313a"; b.style.borderColor = "#C9A227"; }
-    b.style.flex = "0 0 auto";
-    b.addEventListener("click", () => loadPreset(clave));
-    wrap.appendChild(b);
+  const wrap = card.querySelector("#nivelesWrap");
+  NIVEL_ORDEN.forEach(claveNivel => {
+    const bloque = NIVELES[claveNivel];
+    if (!bloque || !bloque.tiles) return;
+    const sub = document.createElement("div");
+    sub.style.marginBottom = "10px";
+    const titulo = document.createElement("div");
+    titulo.style.cssText = "font-size:11.5px;color:var(--oro-claro);font-weight:600;margin-bottom:5px;";
+    titulo.textContent = NIVEL_LABEL[claveNivel] || claveNivel;
+    if (bloque.cota) titulo.textContent += " — cota " + bloque.cota.toFixed(1) + " m s.n.m.";
+    sub.appendChild(titulo);
+    const btnRow = document.createElement("div");
+    btnRow.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;";
+    Object.keys(bloque.tiles).forEach(claveTile => {
+      const t = bloque.tiles[claveTile];
+      const b = document.createElement("button");
+      b.className = "btn-ghost btn-sm";
+      b.textContent = t.label || (claveTile === "FULL" ? "Plano completo" : ("Tramo " + claveTile));
+      if (claveTile === "FULL") { b.style.background = "#2c313a"; b.style.borderColor = "#C9A227"; }
+      b.style.flex = "0 0 auto";
+      b.addEventListener("click", () => loadPreset(claveNivel, claveTile));
+      btnRow.appendChild(b);
+    });
+    sub.appendChild(btnRow);
+    wrap.appendChild(sub);
   });
 }
 
-function loadPreset(clave) {
-  const t = NIVEL04.tiles[clave];
+function loadPreset(claveNivel, claveTile) {
+  const t = NIVELES[claveNivel].tiles[claveTile];
   state.activePlano = {
-    kind: "preset", tramo: clave, file: "assets/" + t.file,
+    kind: "preset", nivel: claveNivel, tramo: claveTile, file: "assets/" + t.file,
     w: t.w_px, h: t.h_px, x0: t.x0, x1: t.x1, y0: t.y0, y1: t.y1,
   };
   save();

@@ -19,9 +19,28 @@ Cada punto guarda su capa; el pin en el plano y la lista de puntos se colorean s
 El CSV y el GeoJSON exportados traen todas las columnas de todas las capas (vacías las que no
 aplican a cada punto).
 
-Trae precargados los 6 tramos (A1–B3) del mosaico 1:750 del Nivel 04, ya calibrados pixel↔UTM
-(no hace falta marcar puntos de control para ese nivel). También acepta cualquier otra foto o
-captura de plano (incluido un plano de superficie), calibrándola a mano con 2 puntos de control.
+Trae precargados **todos los niveles digitalizados de Congreso-León** (02, 03, 04, 05, 06, 07,
+08 y 09) más un plano de **Superficie** con el ortomosaico del dron, todos ya calibrados
+pixel↔UTM (no hace falta marcar puntos de control en ninguno). En "Proyecto" elige primero el
+nivel (o Superficie) y luego el tramo/plancha. El Nivel 04 es el único que trae además los 6
+tramos históricos escaneados (A1–B3) junto con su plano completo; los demás niveles (02, 03, 05,
+06, 07, 08, 09) traen un plano completo generado directamente de la digitalización vectorial
+(SHP) de cada nivel, con grilla UTM cada 50 m. También acepta cualquier otra foto o captura de
+plano, calibrándola a mano con 2 puntos de control.
+
+### Plano de Superficie (ortomosaico)
+
+El plano de "Superficie" es un recorte del ortomosaico de dron (vuelo fotogramétrico de
+Congreso-León), calibrado con los tres brocales de coordenada UTM conocida (Laird, Congreso,
+Old León) — no con el georreferenciado interno del archivo original, porque el `.tif` completo
+(1.4 GB) es demasiado grande para traer tal cual; el recorte usado trae además, de referencia,
+los trazos superpuestos de los niveles 5, 6 y 9 que ya se habían conciliado con ese ortomosaico.
+El DEM de elevación (`DEM.tif` / `demspc.tif`, en tu disco en
+`04_LEVANTAMIENTOS/02_ORTOMOSAICO_Y_DEM`) da la cota del terreno en cada punto pero no es una
+imagen que sirva como fondo visual para tocar y marcar — por eso la capa de Superficie usa el
+ortomosaico (la foto real) y no el DEM; si más adelante necesitas la cota de superficie en un
+punto específico, eso se calcula aparte (muestreo de cotas sobre el DEM), no es parte de esta
+app.
 
 ## Qué es cada archivo
 
@@ -29,8 +48,10 @@ captura de plano (incluido un plano de superficie), calibrándola a mano con 2 p
 - `app.js` — toda la lógica (cálculo de coordenadas, guardado, exportación)
 - `manifest.json`, `sw.js` — lo que la hace instalable y funcionar sin internet
 - `icon-192.png`, `icon-512.png` — ícono de la app
-- `assets/NIVEL04_*.png` — los 6 tramos del nivel 04, ya recortados y con grilla
-- `assets/nivel04_manifest.json` — la calibración exacta de esos 6 tramos (no tocar a mano)
+- `assets/NIVEL04_*.png` — los 6 tramos históricos escaneados del nivel 04, ya recortados y con grilla
+- `assets/NIVEL0{2,3,5,6,7,8,9}_FULL.png` — plano completo de cada nivel, generado de su SHP digitalizado
+- `assets/SUPERFICIE_ORTOMOSAICO.png` — recorte del ortomosaico de dron, calibrado por los 3 brocales
+- `assets/niveles_manifest.json` — la calibración exacta de todos los niveles y de Superficie (no tocar a mano)
 
 ## Cómo instalarla en el iPhone
 

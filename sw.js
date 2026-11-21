@@ -1,4 +1,4 @@
-const CACHE = "nwgeo-muestreo-v2";
+const CACHE = "nwgeo-muestreo-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,7 +6,9 @@ const ASSETS = [
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
-  "./assets/nivel04_manifest.json",
+  "./assets/niveles_manifest.json",
+  "./assets/NIVEL02_FULL.png",
+  "./assets/NIVEL03_FULL.png",
   "./assets/NIVEL04_FULL.png",
   "./assets/NIVEL04_A1.png",
   "./assets/NIVEL04_A2.png",
@@ -14,6 +16,12 @@ const ASSETS = [
   "./assets/NIVEL04_B1.png",
   "./assets/NIVEL04_B2.png",
   "./assets/NIVEL04_B3.png",
+  "./assets/NIVEL05_FULL.png",
+  "./assets/NIVEL06_FULL.png",
+  "./assets/NIVEL07_FULL.png",
+  "./assets/NIVEL08_FULL.png",
+  "./assets/NIVEL09_FULL.png",
+  "./assets/SUPERFICIE_ORTOMOSAICO.png",
 ];
 
 self.addEventListener("install", (ev) => {
