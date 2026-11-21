@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!doctype html>
 <html lang="es">
 <head>
@@ -109,6 +110,7 @@
   <div class="tabs">
     <div class="tab active" data-screen="mapa">Plano</div>
     <div class="tab" data-screen="lista">Puntos</div>
+    <div class="tab" data-screen="barrenos">Barrenos</div>
     <div class="tab" data-screen="proyecto">Proyecto</div>
     <div class="tab" data-screen="ayuda">Ayuda</div>
   </div>
@@ -145,6 +147,7 @@
       </div>
       <div class="toolbar" id="mapToolbar" style="display:none;">
         <button class="btn-ghost btn-sm" id="btnSeleccionArea">Seleccionar área</button>
+        <button class="btn-ghost btn-sm" id="btnRegresarZoom" style="display:none;">&larr; Regresar</button>
         <button class="btn-ghost btn-sm" id="btnVerCompleto" style="display:none;">Ver plano completo</button>
       </div>
     </div>
@@ -159,13 +162,70 @@
       </div>
     </div>
 
+    <div class="screen" id="screen-barrenos">
+      <div class="panel">
+        <div class="card" id="barrenosListaCard">
+          <h3>Barrenos</h3>
+          <div id="barrenosLista"><div class="empty">Aún no hay barrenos registrados.</div></div>
+          <button class="btn-primary" id="btnNuevoBarreno">+ Nuevo barreno</button>
+        </div>
+
+        <div id="barrenoDetalle" style="display:none;">
+          <div class="card">
+            <h3 id="bdTitulo">Barreno</h3>
+            <div id="bdResumen" class="muted" style="margin-bottom:8px;"></div>
+            <div class="row2">
+              <button class="btn-ghost btn-sm" id="btnEditarBarreno">Editar datos del barreno</button>
+              <button class="btn-ghost btn-sm" id="btnCerrarBarreno">← Ver lista de barrenos</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Tramos de logueo (geología)</h3>
+            <p class="muted">De-a continuo: cada tramo nuevo propone "de" = el "a" del tramo anterior.
+            Litología, alteración y estructura usan el mismo catálogo que en Muestreo.</p>
+            <div id="tramosWrap"><div class="empty">Sin tramos todavía.</div></div>
+            <button class="btn-primary" id="btnNuevoTramo">+ Nuevo tramo</button>
+          </div>
+          <div class="card">
+            <h3>Desviación (survey)</h3>
+            <p class="muted">Lecturas de azimut e inclinación a distintas profundidades del barreno,
+            para la trayectoria real (no solo el azimut/inclinación de boca).</p>
+            <div id="surveyWrap"><div class="empty">Sin lecturas de desviación.</div></div>
+            <button class="btn-ghost" id="btnNuevaSurvey">+ Nueva lectura</button>
+          </div>
+          <div class="card">
+            <h3>Exportar este barreno</h3>
+            <p class="muted">Collar, geología por tramo, desviación y muestras de ensaye — mismo
+            esquema que usas para Leapfrog (collar / survey / geo / assay).</p>
+            <button class="btn-primary" id="btnExportBarreno">Exportar CSV (collar + geo + survey + muestras)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="screen" id="screen-proyecto">
       <div class="panel">
         <div class="card">
           <h3>Datos del proyecto</h3>
           <label>Proyecto</label>
           <input id="pProyecto" placeholder="Congreso-León · San Pedro Corralitos">
-          <label>Nivel</label>
+          <label>Abreviatura del proyecto (de aquí nace el folio de cada muestra)</label>
+          <input id="pAbrev" placeholder="p. ej. SPC, CL" maxlength="8" style="text-transform:uppercase;">
+          <label>Nivel activo de muestreo (de Superficie al nivel que definas)</label>
+          <div class="row2">
+            <div>
+              <select id="pNivelModo">
+                <option value="SUP">Superficie</option>
+                <option value="SUB">Subterráneo (nivel)</option>
+              </select>
+            </div>
+            <div>
+              <input id="pNivelNum" type="number" min="0" step="1" placeholder="04" style="display:none;">
+            </div>
+          </div>
+          <p class="muted" style="margin-top:4px;">Define aquí en qué nivel estás levantando muestras hoy;
+          se usa para el folio y se puede cambiar cuantas veces haga falta en el mismo proyecto.</p>
+          <label>Niveles del proyecto (informativo, texto libre)</label>
           <input id="pNivel" placeholder="04">
           <label>Responsable</label>
           <input id="pResp" placeholder="Ing. Gerardo Pérez Reveles">
@@ -196,9 +256,23 @@
         </div>
 
         <div class="card">
+          <h3>Folios de muestreo (QA/QC)</h3>
+          <p class="muted">Al tocar el plano con la capa "Muestreo geoquímico" activa, la app ya te propone
+          el siguiente folio de la serie ABREVIATURA-NIVEL-CONSECUTIVO: solo confirmas, o eliges "Blanco",
+          "Duplicado" o "Estándar" si vas a apartar ese folio para un control de QA/QC (queda intercalado
+          en la numeración real, no aparte). Usa esto solo si necesitas corregir el contador a mano
+          (por ejemplo tras restaurar un respaldo).</p>
+          <div id="folioEstadoTramo" class="muted" style="margin:6px 0;"></div>
+          <label>Forzar siguiente consecutivo para el tramo actual</label>
+          <input type="number" id="folioForzar" min="1" step="1" placeholder="p. ej. 14">
+          <button class="btn-ghost btn-sm" id="btnFolioForzar" style="margin-top:8px;width:100%;">Ajustar contador</button>
+        </div>
+
+        <div class="card">
           <h3>Respaldo</h3>
-          <p class="muted">Todo se guarda offline en este iPhone (localStorage). Exporta seguido:
-          si borras Safari o reinstalas la app, se pierde lo que no hayas exportado.</p>
+          <p class="muted">Todo se guarda offline en este iPhone, por partida doble (almacenamiento local +
+          una copia de seguridad interna). Aun así, exporta seguido: si borras Safari, reinstalas la app
+          o cambias de teléfono, se pierde lo que no hayas exportado a un archivo.</p>
           <button class="btn-ghost" id="btnBackupJSON">Exportar respaldo completo (JSON)</button>
           <input type="file" id="fileRestore" accept="application/json" style="margin-top:8px;">
         </div>
@@ -224,18 +298,61 @@
           </ol>
         </div>
         <div class="card">
+          <h3>Zoom al plano</h3>
+          <p style="font-size:12.5px;line-height:1.6;color:#d8d4c8;">Usa "Seleccionar área" para ampliar un
+          tramo del plano tocando sus dos esquinas. Si vuelves a ampliar desde ahí, "&larr; Regresar" te
+          lleva un nivel de zoom hacia atrás (al recorte anterior), no hasta el plano completo. "Ver plano
+          completo" sí salta directo hasta la vista general.</p>
+        </div>
+        <div class="card">
           <h3>Límites (es PWA offline, no app nativa)</h3>
           <ul style="font-size:12.5px;line-height:1.6;color:#d8d4c8;padding-left:18px;">
             <li>No lee GPS/RTK por Bluetooth (Safari iOS no tiene Web Bluetooth). La posición sale de la
                 grilla del plano, no de un receptor.</li>
             <li>Un plano = un tramo. Para mosaicos de varias láminas, carga y calibra cada tramo aparte.</li>
             <li>No corre en segundo plano: si cambias de app mucho rato, vuelve a abrirla desde el icono.</li>
+            <li>Para que los datos no se vacíen solos, ábrela siempre desde el ícono que agregaste a la
+                pantalla de inicio (no desde una vista previa dentro de otra app) y evita que el teléfono
+                se quede sin espacio de almacenamiento.</li>
           </ul>
         </div>
         <div class="card">
           <h3>Convención de clave de estación</h3>
-          <p class="muted">Sugerida: NIVEL-TRAMO-CONSEC, p. ej. <b>04-B2-013</b> (nivel 04, tramo B2 del
-          mosaico, muestra 013). Ajusta a tu convención si ya usas otra.</p>
+          <p class="muted">Sugerida: ABREVIATURA-NIVEL-CONSECUTIVO, p. ej. <b>SPC-04-013</b> (proyecto SPC,
+          nivel 04, muestra 013) o <b>SPC-SUP-001</b> (nivel Superficie). No lleva el tramo del mosaico de
+          plano: eso solo queda como metadato de dónde se capturó, en la base de datos general del
+          proyecto importa el nivel y el punto UTM real. Ajusta a tu convención si ya usas otra.</p>
+        </div>
+        <div class="card">
+          <h3>Qué es y cómo se usa — Barrenos (logueo de sondeos)</h3>
+          <p class="muted">Pestaña "Barrenos": captura en campo el collar (boca del barreno), la
+          desviación (survey) y la geología por tramo (de-a) de cada sondeo de diamantina o percusión,
+          con los mismos catálogos de litología, alteración y estructura que en Muestreo, más RQD,
+          recuperación y dureza. También marca, dentro de la secuencia de tramos, cuáles van a ensaye y
+          cuáles son controles de QA/QC (blanco, duplicado, estándar) — igual que en Muestreo geoquímico.
+          Exporta collar / survey / geo / muestras en el mismo esquema que usas para Leapfrog.</p>
+          <ol style="font-size:13px;line-height:1.7;color:#d8d4c8;padding-left:18px;">
+            <li>Registra el barreno (collar): clave, UTM, cota de boca, azimut e inclinación de boca,
+                profundidad total, método y diámetro de núcleo.</li>
+            <li>Ve agregando tramos de logueo conforme avanza la perforación: cada tramo nuevo propone
+                "de" = el "a" del tramo anterior, para no dejar huecos ni encimar profundidades.</li>
+            <li>Si el tramo trae estructura orientada o alteración, llena esos campos; si no aplican,
+                déjalos en blanco.</li>
+            <li>Si ese tramo se corta como muestra de ensaye, marca "Sí" y confirma el folio sugerido
+                (o elige Blanco/Duplicado/Estándar para un control de QA/QC).</li>
+            <li>Agrega lecturas de desviación conforme el perforista las reporte (cada cierta
+                profundidad), para la trayectoria real del barreno.</li>
+            <li>Exporta cuando quieras: te da collar, geo, survey y muestras por separado, listos para
+                Leapfrog u otro software de modelado.</li>
+          </ol>
+          <p class="muted" style="margin-top:8px;"><b>Lista de verificación antes de loguear:</b>
+          barreno con clave y collar ya capturados · cinta métrica o referencia de profundidad a la
+          mano · brújula/clinómetro si vas a medir estructura orientada en el núcleo · caja de núcleo
+          marcada y ordenada de-a · formato de QA/QC del proyecto a la mano (dónde van blancos,
+          duplicados y estándares).</p>
+          <p class="muted"><b>Material necesario:</b> celular con esta app instalada desde el ícono
+          (offline) · cinta métrica · marcador para cajas de núcleo · lupa de mano (10×) · HCl diluido
+          si vas a probar carbonatos · tabla de dureza/Mohs de referencia si no la tienes memorizada.</p>
         </div>
       </div>
     </div>
@@ -248,9 +365,16 @@
     <h2 id="modalTitulo">Punto de muestreo</h2>
     <div class="capaBadge" id="modalCapaBadge"><span class="dot"></span><span></span></div>
     <div class="muted" id="modalCoords">—</div>
-    <label>Clave de estación</label>
-    <input id="mClave" placeholder="04-B2-013">
+    <label>Clave de estación (folio sugerido — solo confirma o cambia el tipo de folio)</label>
+    <input id="mClave" placeholder="SPC-04-013">
     <div id="mMuestreoFields">
+      <label>Tipo de folio</label>
+      <select id="mQAQC">
+        <option value="normal">Normal</option>
+        <option value="blanco">Blanco (QA/QC)</option>
+        <option value="duplicado">Duplicado (QA/QC)</option>
+        <option value="estandar">Estándar (QA/QC)</option>
+      </select>
       <div class="row2">
         <div>
           <label>Tipo de muestra</label>
@@ -269,10 +393,49 @@
       </div>
     </div>
     <div id="mCamposExtra"></div>
+    <label>Minerales accesorios observados in situ (hasta 5)</label>
+    <div id="mMineralesWrap" style="display:none; flex-direction:column; gap:6px; margin-bottom:8px;">
+      <div style="display:flex; flex-wrap:wrap; gap:6px;">
+        <select class="mMineralSel" id="mMin1"></select>
+        <select class="mMineralSel" id="mMin2"></select>
+        <select class="mMineralSel" id="mMin3"></select>
+        <select class="mMineralSel" id="mMin4"></select>
+        <select class="mMineralSel" id="mMin5"></select>
+      </div>
+      <input class="mMineralOtro" id="mMin1Otro" style="display:none;" placeholder="Describe el mineral accesorio 1">
+      <input class="mMineralOtro" id="mMin2Otro" style="display:none;" placeholder="Describe el mineral accesorio 2">
+      <input class="mMineralOtro" id="mMin3Otro" style="display:none;" placeholder="Describe el mineral accesorio 3">
+      <input class="mMineralOtro" id="mMin4Otro" style="display:none;" placeholder="Describe el mineral accesorio 4">
+      <input class="mMineralOtro" id="mMin5Otro" style="display:none;" placeholder="Describe el mineral accesorio 5">
+    </div>
     <label>Nivel / cota</label>
     <input id="mNivel" placeholder="04">
     <label>Notas</label>
+    <div id="mNotasGlosarioWrap" style="display:none; margin-bottom:6px;">
+      <select id="mNotasGlosario">
+        <option value="">+ agregar término del glosario…</option>
+        <option value="Vta">Vta — Veta</option>
+        <option value="Vtass">Vtass — Vetillas</option>
+        <option value="Ox">Ox — Óxidos</option>
+        <option value="Stock">Stock — Stockwork</option>
+        <option value="Chim">Chim — Chimenea</option>
+        <option value="Man">Man — Manto</option>
+        <option value="Cont">Cont — Contacto</option>
+        <option value="Diq">Diq — Dique</option>
+        <option value="Cz">Cz — Caliza</option>
+        <option value="Intru">Intru — Intrusivo</option>
+        <option value="Falla">Falla — Falla</option>
+        <option value="Fx">Fx — Fractura</option>
+        <option value="Brx">Brx — Brecha</option>
+        <option value="Skn">Skn — Skarn</option>
+        <option value="Gos">Gos — Gossan</option>
+        <option value="Alt">Alt — Alteración</option>
+        <option value="Vert">Vert — Vertical (orientación)</option>
+      </select>
+      <div class="muted" style="font-size:12px; margin-top:2px;">Elige uno o varios términos; se agregan a Notas separados por coma para mantener la base de datos uniforme.</div>
+    </div>
     <textarea id="mNotas" placeholder="observaciones adicionales"></textarea>
+    <div class="muted" id="mDescGenPreview" style="font-size:12px; margin-top:4px;"></div>
     <div class="flexend">
       <button class="btn-danger btn-sm" id="mBtnBorrar" style="display:none;">Borrar punto</button>
       <button class="btn-ghost btn-sm" id="mBtnCancelar">Cancelar</button>
@@ -281,6 +444,134 @@
   </div>
 </div>
 
+<div class="modal-bg" id="modalBarreno">
+  <div class="modal">
+    <div class="closebar"></div>
+    <h2 id="modalBarrenoTitulo">Barreno</h2>
+    <label>Clave del barreno</label>
+    <input id="bClave" placeholder="BCL-03">
+    <div class="row2">
+      <div><label>Este UTM</label><input id="bEste" type="number" step="0.01"></div>
+      <div><label>Norte UTM</label><input id="bNorte" type="number" step="0.01"></div>
+    </div>
+    <div class="row2">
+      <div><label>Cota brocal (m)</label><input id="bCota" type="number" step="0.01"></div>
+      <div><label>Profundidad total (m)</label><input id="bProf" type="number" step="0.01"></div>
+    </div>
+    <div class="row2">
+      <div><label>Azimut de boca (°)</label><input id="bAzimut" type="number" step="0.1"></div>
+      <div><label>Inclinación de boca (°)</label><input id="bInclin" type="number" step="0.1"></div>
+    </div>
+    <label>Método de perforación</label>
+    <select id="bMetodo">
+      <option value="diamantina">Diamantina</option>
+      <option value="percusion">Percusión / aire reverso</option>
+      <option value="otro">Otro</option>
+    </select>
+    <label>Diámetro de núcleo</label>
+    <input id="bDiam" placeholder="HQ, NQ, PQ…">
+    <div class="row2">
+      <div><label>Fecha inicio</label><input id="bFechaIni" type="date"></div>
+      <div><label>Fecha fin</label><input id="bFechaFin" type="date"></div>
+    </div>
+    <label>Empresa perforadora</label>
+    <input id="bEmpresa">
+    <label>Notas</label>
+    <textarea id="bNotas"></textarea>
+    <div class="flexend">
+      <button class="btn-danger btn-sm" id="bBtnBorrar" style="display:none;">Borrar barreno</button>
+      <button class="btn-ghost btn-sm" id="bBtnCancelar">Cancelar</button>
+      <button class="btn-primary" id="bBtnGuardar" style="width:auto;margin-top:0;">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalTramo">
+  <div class="modal">
+    <div class="closebar"></div>
+    <h2 id="modalTramoTitulo">Tramo de logueo</h2>
+    <div class="row2">
+      <div><label>De (m)</label><input id="tDe" type="number" step="0.01"></div>
+      <div><label>A (m)</label><input id="tA" type="number" step="0.01"></div>
+    </div>
+    <div id="tramoAvisoContinuidad" class="muted" style="margin:2px 0 8px;"></div>
+    <div class="card">
+      <h3>Litología</h3>
+      <div id="tCamposLito"></div>
+    </div>
+    <div class="card">
+      <h3>Alteración</h3>
+      <div id="tCamposAlt"></div>
+    </div>
+    <div class="card">
+      <h3>Estructural</h3>
+      <div id="tCamposEst"></div>
+    </div>
+    <div class="card">
+      <h3>Geotécnico</h3>
+      <div class="row2">
+        <div><label>RQD (%)</label><input id="tRQD" type="number" min="0" max="100" step="1"></div>
+        <div><label>Recuperación (%)</label><input id="tRecup" type="number" min="0" max="100" step="1"></div>
+      </div>
+      <label>Dureza</label>
+      <select id="tDureza">
+        <option value="">—</option>
+        <option value="muy_blanda">Muy blanda</option>
+        <option value="blanda">Blanda</option>
+        <option value="moderada">Moderada</option>
+        <option value="dura">Dura</option>
+        <option value="muy_dura">Muy dura</option>
+      </select>
+    </div>
+    <div class="card">
+      <h3>Muestra de ensaye (opcional)</h3>
+      <label>¿Este tramo se envía a ensaye?</label>
+      <select id="tEsMuestra">
+        <option value="no">No</option>
+        <option value="si">Sí</option>
+      </select>
+      <div id="tMuestraCampos" style="display:none;">
+        <label>Tipo de folio</label>
+        <select id="tQAQC">
+          <option value="normal">Normal</option>
+          <option value="blanco">Blanco (QA/QC)</option>
+          <option value="duplicado">Duplicado (QA/QC)</option>
+          <option value="estandar">Estándar (QA/QC)</option>
+        </select>
+        <label>Folio de muestra (sugerido — confirma o cambia el tipo de folio)</label>
+        <input id="tFolio" placeholder="SPC-BCL-03-014">
+      </div>
+    </div>
+    <label>Notas</label>
+    <textarea id="tNotas"></textarea>
+    <div class="flexend">
+      <button class="btn-danger btn-sm" id="tBtnBorrar" style="display:none;">Borrar tramo</button>
+      <button class="btn-ghost btn-sm" id="tBtnCancelar">Cancelar</button>
+      <button class="btn-primary" id="tBtnGuardar" style="width:auto;margin-top:0;">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalSurvey">
+  <div class="modal">
+    <div class="closebar"></div>
+    <h2>Lectura de desviación</h2>
+    <label>Profundidad (m)</label>
+    <input id="svProf" type="number" step="0.01">
+    <label>Azimut (°)</label>
+    <input id="svAzimut" type="number" step="0.1">
+    <label>Inclinación (°)</label>
+    <input id="svInclin" type="number" step="0.1">
+    <div class="flexend">
+      <button class="btn-danger btn-sm" id="svBtnBorrar" style="display:none;">Borrar</button>
+      <button class="btn-ghost btn-sm" id="svBtnCancelar">Cancelar</button>
+      <button class="btn-primary" id="svBtnGuardar" style="width:auto;margin-top:0;">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>
+
+</body></html>

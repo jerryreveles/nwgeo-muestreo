@@ -32,48 +32,14 @@ captura de plano (incluido un plano de superficie), calibrándola a mano con 2 p
 - `assets/NIVEL04_*.png` — los 6 tramos del nivel 04, ya recortados y con grilla
 - `assets/nivel04_manifest.json` — la calibración exacta de esos 6 tramos (no tocar a mano)
 
-## Cómo instalarla en el iPhone (sin hosting, sin cuentas, sin Netlify, sin Claude, sin .zip)
+## Cómo instalarla en el iPhone
 
-No necesita subirse a ningún servidor ni servicio, y la carpeta se pasa tal cual — **sin
-comprimirla**, porque iOS no acepta bien archivos .zip para esto. Dos formas de pasarla,
-según de dónde salga:
-
-**A) Si sale de un iPhone/iPad/Mac (AirDrop) — la más simple:**
-1. Selecciona la carpeta `nwgeo_muestreo` completa (no un .zip) y mándala por AirDrop al
-   iPhone de Jorge. AirDrop entre dispositivos Apple conserva la carpeta con todos sus
-   archivos adentro, no hace falta descomprimir nada.
-2. En su iPhone, al aceptar el AirDrop elige "Guardar en Archivos".
-3. En la app **Archivos**, entra a la carpeta `nwgeo_muestreo` y toca `index.html` → se
-   abre en Safari, ya funcionando completo: marcar puntos, UTM, guardar, exportar — todo
-   corre localmente, sin internet.
-
-**B) Si sale de tu computadora (no hay AirDrop, p. ej. Windows) — por Google Drive o
-iCloud Drive, como carpeta (no como .zip):**
-1. Sube la carpeta `nwgeo_muestreo` completa a una carpeta de Google Drive o iCloud Drive.
-2. Comparte la liga de esa carpeta con Jorge (por WhatsApp o correo).
-3. Jorge abre la liga en su iPhone (con la app de Google Drive, o directo en Archivos si
-   es iCloud) y toca "Guardar en Archivos" / "Descargar" para esa carpeta completa.
-4. En la app **Archivos**, entra a la carpeta y toca `index.html` → se abre en Safari,
-   igual que arriba.
-
-En ambos casos: para tenerla a la mano después, en Safari usa el botón de compartir →
-"Agregar a pantalla de inicio" (o deja el acceso directo a `index.html` en Archivos y
-ábrelo siempre desde ahí — los datos capturados se guardan en ese Safari del teléfono,
-así que conviene abrirla siempre igual, no reinstalarla cada vez).
-
-No hace falta GitHub, Netlify, cuenta de Apple nueva, ni cuenta de Claude — ni para ti ni
-para Jorge.
-
-### Cómo mandar la base de datos de vuelta (tu idea: Safari en la mina, internet en el campamento)
-
-Exacto — así es como está pensada: dentro de la mina se usa sin señal (todo es local).
-Cuando se llega al campamento con señal:
-
-1. Pestaña **Puntos** → botón **Exportar CSV + GeoJSON**.
-2. Se abre el menú de compartir de iOS: ahí se manda por WhatsApp, correo o AirDrop al
-   celular o compu de quien esté consolidando los datos.
-3. De vez en cuando conviene además mandar el "Exportar respaldo completo (JSON)" — ese
-   es el que permite reconstruir todo si se cambia de teléfono o se reinstala Safari.
+1. Sube toda la carpeta `nwgeo_muestreo` a Netlify (arrastrar la carpeta a app.netlify.com/drop,
+   igual que con "nwgeo Campo"), o a cualquier hosting estático / tu propio servidor.
+2. Abre la liga que te dé Netlify en Safari del iPhone.
+3. Botón de compartir (cuadrito con flecha) → "Agregar a pantalla de inicio".
+4. Ábrela desde el ícono: ya queda instalada y funciona sin internet (el service worker guarda
+   todo en el teléfono la primera vez que abre con señal).
 
 ## Cómo se usa en campo
 
