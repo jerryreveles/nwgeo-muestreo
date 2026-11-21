@@ -193,6 +193,16 @@
  },
  "SUPERFICIE": {
   "tiles": {
+   "GEOLOGIA": {
+    "file": "SUPERFICIE_GEOLOGIA.png",
+    "x0": 245629.02,
+    "x1": 246698.79,
+    "y0": 3400669.19,
+    "y1": 3402166.07,
+    "w_px": 1926,
+    "h_px": 2694,
+    "label": "Geología superficial digitalizada"
+   },
    "ORTOMOSAICO": {
     "file": "SUPERFICIE_ORTOMOSAICO.png",
     "x0": 245680.03,

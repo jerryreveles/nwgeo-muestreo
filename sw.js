@@ -1,4 +1,4 @@
-const CACHE = "nwgeo-muestreo-v3";
+const CACHE = "nwgeo-muestreo-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -22,6 +22,7 @@ const ASSETS = [
   "./assets/NIVEL08_FULL.png",
   "./assets/NIVEL09_FULL.png",
   "./assets/SUPERFICIE_ORTOMOSAICO.png",
+  "./assets/SUPERFICIE_GEOLOGIA.png",
 ];
 
 self.addEventListener("install", (ev) => {

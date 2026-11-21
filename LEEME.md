@@ -28,19 +28,29 @@ tramos históricos escaneados (A1–B3) junto con su plano completo; los demás 
 (SHP) de cada nivel, con grilla UTM cada 50 m. También acepta cualquier otra foto o captura de
 plano, calibrándola a mano con 2 puntos de control.
 
-### Plano de Superficie (ortomosaico)
+### Plano de Superficie: geología digitalizada + ortomosaico
 
-El plano de "Superficie" es un recorte del ortomosaico de dron (vuelo fotogramétrico de
-Congreso-León), calibrado con los tres brocales de coordenada UTM conocida (Laird, Congreso,
-Old León) — no con el georreferenciado interno del archivo original, porque el `.tif` completo
-(1.4 GB) es demasiado grande para traer tal cual; el recorte usado trae además, de referencia,
-los trazos superpuestos de los niveles 5, 6 y 9 que ya se habían conciliado con ese ortomosaico.
+"Superficie" trae dos planchas, elige la que necesites:
+
+- **Geología superficial digitalizada** — los 187 polígonos de litología digitalizados de las
+  6 cartas "Geología Superficial" de Frisco (1973-75, 1:1000): aluvión/talud, Fm. Candelaria,
+  Fm. San Pedro y diorita, con su color propio de carta y los tres brocales conocidos (Laird,
+  Congreso, Old León) de referencia. Precisión UTM esperada +-3 a 5 m (ver
+  `02_GEORREFERENCIACION/GEOLOGIA_LEEME.txt` en tu disco para la auditoría completa: de dónde
+  salen las 4 clases, por qué las fallas con rumbo/echado no se pudieron sacar de estas cartas,
+  y la advertencia de cota — estas cartas están en el datum local de mina, 78.4 m por debajo
+  del real).
+- **Ortomosaico de superficie (dron)** — recorte del ortomosaico fotogramétrico de
+  Congreso-León, calibrado con los mismos tres brocales (no con el georreferenciado interno del
+  archivo original, porque el `.tif` completo de 1.4 GB es demasiado grande para traer tal cual);
+  trae además, de referencia, los trazos superpuestos de los niveles 5, 6 y 9 que ya se habían
+  conciliado con ese ortomosaico.
+
 El DEM de elevación (`DEM.tif` / `demspc.tif`, en tu disco en
 `04_LEVANTAMIENTOS/02_ORTOMOSAICO_Y_DEM`) da la cota del terreno en cada punto pero no es una
-imagen que sirva como fondo visual para tocar y marcar — por eso la capa de Superficie usa el
-ortomosaico (la foto real) y no el DEM; si más adelante necesitas la cota de superficie en un
-punto específico, eso se calcula aparte (muestreo de cotas sobre el DEM), no es parte de esta
-app.
+imagen que sirva como fondo visual para tocar y marcar; si más adelante necesitas la cota de
+superficie en un punto específico, eso se calcula aparte (muestreo de cotas sobre el DEM), no es
+parte de esta app.
 
 ## Qué es cada archivo
 
