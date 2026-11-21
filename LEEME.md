@@ -87,6 +87,24 @@ parte de esta app.
 5. "Exportar respaldo completo (JSON)" de vez en cuando, por si se reinstala Safari o se cambia
    de teléfono — eso sí reconstruye todo (puntos, calibraciones, planos propios cargados).
 
+### Barrenos (logueo de perforación)
+
+- Pestaña **Barrenos**: "+ Nuevo barreno" para capturar collar (clave, coordenadas, azimut,
+  inclinación, profundidad). Dentro de cada barreno: "+ Nuevo tramo" (de-a continuo, litología,
+  alteración, estructura, RQD, recuperación, dureza y muestra de ensaye opcional con folio/QA-QC)
+  y "+ Nueva lectura" (desviación: profundidad, azimut, inclinación).
+- "Exportar CSVs del barreno" genera 4 archivos (collar, survey, geo, muestras) en esquema
+  compatible con Leapfrog.
+- **Importar barrenos ya levantados**: si ya tienes una base de datos de barrenos hecha en Excel
+  u otro programa (collar y/o tramos), en la lista de Barrenos hay dos cajas de importación CSV
+  que usan exactamente las mismas columnas que exporta "Exportar CSVs del barreno" (hole_id,
+  este_utm, norte_utm, cota, azimut, inclinacion, profundidad_m, etc. para collar; hole_id, de_m,
+  a_m, grupo_litologico, tipo_roca, etc. para tramos). Primero se importa el collar (crea o
+  actualiza el barreno por su clave/hole_id), y después los tramos (se agregan al barreno con esa
+  misma clave; si el collar aún no existe, ese tramo se omite y la app te avisa cuáles claves
+  faltaron). Reimportar el mismo CSV de collar no duplica el barreno, lo actualiza. Así puedes
+  seguir describiendo/editando tramos desde el teléfono sin volver a capturar todo a mano.
+
 ## Lista de verificación antes de salir a campo
 
 - [ ] Batería del iPhone cargada (la app no gasta datos, pero sí batería de pantalla)

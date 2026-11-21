@@ -456,12 +456,25 @@ function buildPresetButtons() {
   });
 }
 
+// A qué "nivel activo de muestreo" corresponde cada clave de nivel precargado, para que el
+// folio sugerido y el campo "Nivel" de cada punto queden sincronizados con el plano que se
+// está viendo — antes de este arreglo, elegir aquí un nivel precargado NO actualizaba el nivel
+// activo de la pestaña Proyecto, y un punto capturado sobre el plano del Nivel 06 podía
+// terminar guardado con el folio y el campo "Nivel" de, por ejemplo, Superficie o el Nivel 04.
+function nivelActivoDesdeClavePreset(claveNivel) {
+  if (claveNivel === "SUPERFICIE") return { modo: "SUP", num: null };
+  const m = /^NIVEL(\d+)$/.exec(claveNivel);
+  return { modo: "SUB", num: m ? String(parseInt(m[1], 10)) : null };
+}
+
 function loadPreset(claveNivel, claveTile) {
   const t = NIVELES[claveNivel].tiles[claveTile];
   state.activePlano = {
     kind: "preset", nivel: claveNivel, tramo: claveTile, file: "assets/" + t.file,
     w: t.w_px, h: t.h_px, x0: t.x0, x1: t.x1, y0: t.y0, y1: t.y1,
   };
+  state.nivelActivo = nivelActivoDesdeClavePreset(claveNivel);
+  pintarNivelActivoUI();
   save();
   mostrarPlano();
   switchTab("mapa");
@@ -1280,6 +1293,7 @@ document.getElementById("mBtnGuardar").addEventListener("click", () => {
   modalBg.classList.remove("show");
   ocultarCrosshair();
   renderPuntos();
+  renderLista();
   pintarFolioEstadoTramo();
 });
 
@@ -1290,6 +1304,7 @@ document.getElementById("mBtnBorrar").addEventListener("click", () => {
   modalBg.classList.remove("show");
   ocultarCrosshair();
   renderPuntos();
+  renderLista();
 });
 
 // ---------- barrenos (logueo de sondeos) ----------
@@ -1656,6 +1671,128 @@ document.getElementById("btnExportBarreno").addEventListener("click", () => {
   setTimeout(() => descargar(`survey_${pref}.csv`, surveyRows.join("\n"), "text/csv"), 350);
   setTimeout(() => descargar(`geo_${pref}.csv`, geoRows.join("\n"), "text/csv"), 700);
   setTimeout(() => descargar(`muestras_${pref}.csv`, muestraRows.join("\n"), "text/csv"), 1050);
+});
+
+// ---------- importar barrenos ya levantados (CSV collar / tramos) ----------
+// Parser CSV simple que respeta comillas (campos con comas o comillas dentro, como los que
+// genera "Exportar CSVs del barreno"), para poder traer de vuelta una base de datos de barrenos
+// hecha fuera de la app (o exportada previamente) y seguir describiéndola desde aquí.
+function parseCSVTexto(texto) {
+  const txt = texto.replace(/^﻿/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const filas = [];
+  let fila = [], campo = "", enComillas = false;
+  for (let i = 0; i < txt.length; i++) {
+    const c = txt[i];
+    if (enComillas) {
+      if (c === '"') {
+        if (txt[i + 1] === '"') { campo += '"'; i++; } else { enComillas = false; }
+      } else campo += c;
+    } else if (c === '"') {
+      enComillas = true;
+    } else if (c === ",") {
+      fila.push(campo); campo = "";
+    } else if (c === "\n") {
+      fila.push(campo); campo = "";
+      filas.push(fila); fila = [];
+    } else {
+      campo += c;
+    }
+  }
+  if (campo !== "" || fila.length) { fila.push(campo); filas.push(fila); }
+  const limpias = filas.filter(f => f.some(v => v.trim() !== ""));
+  if (!limpias.length) return [];
+  const headers = limpias[0].map(h => h.trim().toLowerCase());
+  return limpias.slice(1).map(f => {
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h] = (f[idx] !== undefined ? f[idx] : "").trim(); });
+    return obj;
+  });
+}
+function numOImportar(v) {
+  if (v === undefined || v === null || v.trim() === "") return null;
+  const n = parseFloat(v.replace(",", "."));
+  return isNaN(n) ? null : n;
+}
+function barrenoPorClave(clave) {
+  return state.barrenos.find(b => (b.clave || "").trim().toLowerCase() === clave.trim().toLowerCase());
+}
+
+document.getElementById("fileImportCollar").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const filas = parseCSVTexto(String(reader.result));
+    let creados = 0, actualizados = 0, sinClave = 0;
+    filas.forEach(r => {
+      const clave = (r.hole_id || r.clave || "").trim();
+      if (!clave) { sinClave++; return; }
+      const data = {
+        clave,
+        este: numOImportar(r.este_utm), norte: numOImportar(r.norte_utm), cota: numOImportar(r.cota),
+        azimut: numOImportar(r.azimut), inclin: numOImportar(r.inclinacion), prof: numOImportar(r.profundidad_m),
+        metodo: r.metodo || "diamantina", diam: r.diametro_nucleo || "",
+        fechaIni: r.fecha_inicio || "", fechaFin: r.fecha_fin || "",
+        empresa: r.empresa || "", notas: r.notas || "",
+      };
+      const existente = barrenoPorClave(clave);
+      if (existente) {
+        Object.assign(existente, data);
+        actualizados++;
+      } else {
+        const id = "b" + (state.nextBarrenoId++);
+        state.barrenos.push({ id, ...data });
+        creados++;
+      }
+    });
+    save();
+    renderBarrenosLista();
+    alert(`Importación de collares lista.\nCreados: ${creados}\nActualizados: ${actualizados}` +
+      (sinClave ? `\nFilas sin hole_id/clave (omitidas): ${sinClave}` : ""));
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById("fileImportGeo").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const filas = parseCSVTexto(String(reader.result));
+    let agregados = 0, actualizadosT = 0, sinBarreno = [];
+    filas.forEach(r => {
+      const clave = (r.hole_id || r.clave || "").trim();
+      const de = numOImportar(r.de_m), a = numOImportar(r.a_m);
+      if (!clave || de == null || a == null) return;
+      const b = barrenoPorClave(clave);
+      if (!b) { if (!sinBarreno.includes(clave)) sinBarreno.push(clave); return; }
+      const data = {
+        barrenoId: b.id, de, a,
+        litologico: { grupo: r.grupo_litologico || "", tipoRoca: r.tipo_roca || "", unidad: r.unidad || "", textura: r.textura || "" },
+        alteracion: { tipoAlt: r.tipo_alteracion || "", intensidad: r.intensidad_alt || "", mineralesAsoc: r.minerales_asociados || "" },
+        estructural: { tipoEstr: r.tipo_estructura || "", rumbo: r.rumbo || "", echado: r.echado || "", bloque: r.bloque || "", cinematica: r.cinematica || "", relleno: r.relleno || "" },
+        rqd: r.rqd_pct || "", recup: r.recuperacion_pct || "", dureza: r.dureza || "", notas: r.notas || "",
+        esMuestra: "no", qaqc: "", folio: "",
+      };
+      const existente = state.tramosBarreno.find(t => t.barrenoId === b.id && t.de === de && t.a === a);
+      if (existente) {
+        Object.assign(existente, data);
+        actualizadosT++;
+      } else {
+        data.id = "t" + (state.nextTramoId++);
+        state.tramosBarreno.push(data);
+        agregados++;
+      }
+    });
+    save();
+    renderBarrenosLista();
+    if (state.barrenoActivoId) renderTramosWrap(state.barrenoActivoId);
+    alert(`Importación de tramos lista.\nTramos nuevos: ${agregados}\nTramos actualizados (mismo de-a): ${actualizadosT}` +
+      (sinBarreno.length ? `\nhole_id sin barreno existente (importa primero el collar): ${sinBarreno.join(", ")}` : ""));
+    e.target.value = "";
+  };
+  reader.readAsText(file);
 });
 
 // ---------- lista ----------

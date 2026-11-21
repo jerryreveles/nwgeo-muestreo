@@ -170,6 +170,24 @@
           <button class="btn-primary" id="btnNuevoBarreno">+ Nuevo barreno</button>
         </div>
 
+        <div class="card" id="barrenosImportCard">
+          <h3>Importar barrenos ya levantados (CSV)</h3>
+          <p class="muted">Si ya tienes una base de datos de barrenos (collar y/o tramos de logueo) hecha en Excel
+          u otro programa, impórtala aquí para seguir describiéndola desde el teléfono. Usa las mismas columnas
+          que genera "Exportar CSVs del barreno" en la ficha de cada barreno:</p>
+          <p class="muted"><b>Collar:</b> hole_id, este_utm, norte_utm, cota, azimut, inclinacion, profundidad_m,
+          metodo, diametro_nucleo, fecha_inicio, fecha_fin, empresa, notas.</p>
+          <p class="muted"><b>Tramos/geología:</b> hole_id, de_m, a_m, grupo_litologico, tipo_roca, unidad, textura,
+          tipo_alteracion, intensidad_alt, minerales_asociados, tipo_estructura, rumbo, echado, bloque, cinematica,
+          relleno, rqd_pct, recuperacion_pct, dureza, notas.</p>
+          <p class="muted">"hole_id" es la clave del barreno (p. ej. SPC-01): si ya existe un barreno con esa clave
+          se actualiza/se le agregan tramos; si no existe, se crea uno nuevo.</p>
+          <label>1) Importar collares</label>
+          <input type="file" id="fileImportCollar" accept=".csv,text/csv">
+          <label style="margin-top:8px;">2) Importar tramos de logueo (después de importar collares)</label>
+          <input type="file" id="fileImportGeo" accept=".csv,text/csv">
+        </div>
+
         <div id="barrenoDetalle" style="display:none;">
           <div class="card">
             <h3 id="bdTitulo">Barreno</h3>
@@ -225,8 +243,12 @@
           </div>
           <p class="muted" style="margin-top:4px;">Define aquí en qué nivel estás levantando muestras hoy;
           se usa para el folio y se puede cambiar cuantas veces haga falta en el mismo proyecto.</p>
-          <label>Niveles del proyecto (informativo, texto libre)</label>
-          <input id="pNivel" placeholder="04">
+          <label>Niveles del proyecto (solo nota de referencia — no define folios ni el campo "Nivel" de cada punto)</label>
+          <input id="pNivel" placeholder="p. ej. 02, 04, 06, 09">
+          <p class="muted" style="margin-top:4px;">Este campo es solo una nota tuya (qué niveles abarca el proyecto en
+          general); el que manda para el folio y para el "Nivel" de cada punto nuevo es siempre el de arriba
+          ("Nivel activo de muestreo"), y éste se actualiza solo al elegir un nivel precargado en "Niveles
+          precargados".</p>
           <label>Responsable</label>
           <input id="pResp" placeholder="Ing. Gerardo Pérez Reveles">
           <label>Sistema de coordenadas</label>
