@@ -863,6 +863,39 @@ function pxToUTM(px, py) {
   return null;
 }
 
+// Inversa de pxToUTM: dada una coordenada UTM real, dónde cae en PIXELES del plano actualmente
+// activo. Es la que de verdad hay que usar para DIBUJAR un punto ya guardado (su "este/norte" es
+// el dato real de campo que no cambia); el pixel con el que se guardó originalmente (_px/_py) solo
+// sirve para reabrir su ficha de edición, nunca para saber dónde pintarlo en el plano que se esté
+// viendo ahora — antes se pintaba reescalando ese pixel viejo contra el tamaño de la imagen actual,
+// lo cual solo coincide por casualidad si las dos imágenes miden exactamente lo mismo en pixeles.
+function utmToPx(e, n) {
+  const p = state.activePlano;
+  if (!p) return null;
+  if (p.kind === "preset") {
+    const px = (e - p.x0) / (p.x1 - p.x0) * p.w;
+    const py = (p.y1 - n) / (p.y1 - p.y0) * p.h;
+    return { px, py };
+  }
+  if (p.kind === "custom" && p.cal && p.cal.length === 2) {
+    const [A, B] = p.cal;
+    const dpx = B.px - A.px, dpy = B.py - A.py;
+    const de = B.e - A.e, dn = B.n - A.n;
+    const denom = dpx * dpx + dpy * dpy;
+    if (denom === 0) return null;
+    const a = (dpx * de + dpy * dn) / denom;
+    const b = (dpx * dn - dpy * de) / denom;
+    // inversa de la Helmert de pxToUTM
+    const s2 = a * a + b * b;
+    if (s2 === 0) return null;
+    const dE = e - A.e, dN = n - A.n;
+    const px = A.px + (a * dE + b * dN) / s2;
+    const py = A.py + (-b * dE + a * dN) / s2;
+    return { px, py };
+  }
+  return null;
+}
+
 // mientras se arma el recuadro (esperando la 2ª esquina o un punto extra), el recuadro se
 // dibuja EN VIVO siguiendo el dedo, sin necesidad de soltar/tocar para verlo crecer
 function onSelMove(ev) {
@@ -988,13 +1021,19 @@ function renderPuntos() {
       return clavePt === claveActual;
     })
     .forEach(pt => {
-      if (pt._px == null) return;
+      if (pt.este == null || pt.norte == null) return;
+      // Siempre se recalcula contra la calibración del plano QUE SE ESTÁ VIENDO AHORA, a partir
+      // de la UTM real guardada del punto — nunca reescalando el pixel con el que se capturó
+      // (ese pixel es de la imagen en la que se tocó, que puede medir distinto en pixeles que la
+      // que está abierta ahora, aunque sean "del mismo nivel").
+      const pos = utmToPx(pt.este, pt.norte);
+      if (!pos) return;
       const color = (CAPAS[pt.capa] || CAPAS.muestreo).color;
       const d = document.createElement("div");
       d.className = "pt";
       d.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 0C6.5 0 2 4.5 2 10c0 7.5 10 14 10 14s10-6.5 10-14C22 4.5 17.5 0 12 0z" fill="' + color + '" stroke="#14171C" stroke-width="1"/><circle cx="12" cy="10" r="4" fill="#14171C"/></svg>';
-      d.style.left = (pt._px / img.naturalWidth * img.clientWidth) + "px";
-      d.style.top = (pt._py / img.naturalHeight * img.clientHeight) + "px";
+      d.style.left = (pos.px / img.naturalWidth * img.clientWidth) + "px";
+      d.style.top = (pos.py / img.naturalHeight * img.clientHeight) + "px";
       if (etiquetasVisibles.has(pt.id)) {
         const lbl = document.createElement("div");
         lbl.className = "pt-label";
@@ -1275,8 +1314,11 @@ function construirCamposExtra(capa, valores) {
 
 function abrirModalEditar(pt) {
   modalEditId = pt.id;
-  modalPxPy = { px: pt._px, py: pt._py };
-  mostrarCrosshair(pt._px, pt._py);
+  // Igual que al dibujarlo: la cruz se posiciona por su UTM real contra el plano que se está
+  // viendo ahora, no por el pixel con el que se guardó (ver renderPuntos/utmToPx).
+  const pos = utmToPx(pt.este, pt.norte) || { px: pt._px, py: pt._py };
+  modalPxPy = pos;
+  mostrarCrosshair(pos.px, pos.py);
   const capa = pt.capa || "muestreo";
   modalBg._capa = capa;
   document.getElementById("modalTitulo").textContent = "Editar punto";
