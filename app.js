@@ -121,6 +121,7 @@ function defaultState() {
     capaActiva: "muestreo", // qué tipo de punto se crea al tocar el plano
     folioPorTramo: {}, // {NIVEL: siguiente_consecutivo_libre} para la numeración de folio de muestreo geoquímico
     nivelActivo: { modo: "SUP", num: null }, // de qué nivel es el muestreo que se está levantando ahora: Superficie o Nivel X
+    mostrarOtrosNiveles: false, // ver (como referencia) los puntos de otros niveles sobre el plano actual
     barrenos: [],       // collar: {id, clave, este, norte, cota, prof, azimut, inclin, metodo, diam, fechaIni, fechaFin, empresa, notas}
     tramosBarreno: [],  // geología por tramo: {id, barrenoId, de, a, litologico:{}, alteracion:{}, estructural:{}, rqd, recup, dureza, esMuestra, qaqc, folio, notas}
     surveyBarreno: [],  // desviación: {id, barrenoId, prof, azimut, inclin}
@@ -289,6 +290,19 @@ function renderCapaBar() {
     });
     bar.appendChild(chip);
   });
+  // Por default el plano solo muestra los puntos de SU PROPIO nivel/tramo (ver renderPuntos).
+  // Este chip deja verlos todos encimados, como referencia, sin perder el filtro normal al
+  // desactivarlo de nuevo.
+  const chipOtros = document.createElement("div");
+  chipOtros.className = "capaChip" + (state.mostrarOtrosNiveles ? " active" : "");
+  chipOtros.innerHTML = '<span class="dot" style="background:#7a8088"></span><span>Ver otros niveles</span>';
+  chipOtros.addEventListener("click", () => {
+    state.mostrarOtrosNiveles = !state.mostrarOtrosNiveles;
+    save();
+    renderCapaBar();
+    renderPuntos();
+  });
+  bar.appendChild(chipOtros);
 }
 let state = load();
 renderCapaBar();
@@ -933,6 +947,26 @@ function renderCalLayer() {
 // abre la ficha para editarlo.
 const etiquetasVisibles = new Set();
 
+// Varios niveles precargados (02, 03, 05, 06, 07, 08, 09 y Superficie) comparten el mismo
+// "tramo" ("FULL", su plano completo) — solo el Nivel 04 tiene tramos propios (A1-B3). Antes de
+// este arreglo, pt.tramo === tramoActual no distinguía esos niveles entre sí y los puntos de
+// todos ellos se mezclaban sobre cualquier plano "FULL" que se tuviera abierto, cayendo fuera
+// del plano visible (cada nivel tiene su propia calibración pixel<->UTM).
+// Los puntos capturados ANTES de este arreglo no traen "planoClave": se intenta reconstruirlo
+// a partir del texto libre que haya en su campo "Nivel / cota" (p. ej. "06", "Nivel 6", "sup").
+function normalizaNivelTexto(txt) {
+  const t = (txt || "").trim().toLowerCase();
+  if (!t) return null;
+  if (/^sup/.test(t)) return "SUPERFICIE";
+  const m = /(\d+)/.exec(t);
+  if (!m) return null;
+  return "NIVEL" + m[1].padStart(2, "0");
+}
+function planoClaveDePunto(pt) {
+  if (pt.planoClave) return pt.planoClave;
+  return normalizaNivelTexto(pt.nivel);
+}
+
 function renderPuntos() {
   const layer = document.getElementById("ptLayer");
   layer.innerHTML = "";
@@ -940,8 +974,19 @@ function renderPuntos() {
   const p = state.activePlano;
   if (!p) return;
   const tramoActual = p.kind === "preset" ? p.tramo : "custom";
+  const claveActual = p.kind === "preset" ? p.nivel : null;
   state.puntos
-    .filter(pt => pt.tramo === tramoActual || (p.kind === "custom"))
+    .filter(pt => {
+      if (p.kind === "custom") return true;
+      if (pt.tramo !== tramoActual) return false;
+      if (state.mostrarOtrosNiveles) return true;
+      const clavePt = planoClaveDePunto(pt);
+      // si no se pudo saber de qué nivel es (texto libre ambiguo o vacío), se sigue mostrando
+      // para no "perder" datos de campo ya capturados; ábrelo y guárdalo de nuevo para que
+      // quede etiquetado y deje de mezclarse.
+      if (!clavePt) return true;
+      return clavePt === claveActual;
+    })
     .forEach(pt => {
       if (pt._px == null) return;
       const color = (CAPAS[pt.capa] || CAPAS.muestreo).color;
@@ -1272,6 +1317,10 @@ document.getElementById("mBtnGuardar").addEventListener("click", () => {
   const utm = modalBg._utm;
   const p = state.activePlano;
   const tramo = p.kind === "preset" ? p.tramo : "custom";
+  // A qué plano precargado pertenece este punto (p. ej. "NIVEL06", "SUPERFICIE"), aparte del
+  // "tramo": varios niveles comparten el mismo tramo "FULL" (su plano completo), así que el
+  // tramo solo no basta para no mezclar puntos de niveles distintos sobre el mismo plano.
+  const planoClave = p.kind === "preset" ? p.nivel : null;
   const capa = modalBg._capa || "muestreo";
   const data = {
     capa,
@@ -1280,6 +1329,7 @@ document.getElementById("mBtnGuardar").addEventListener("click", () => {
     notas: document.getElementById("mNotas").value,
     este: utm.e, norte: utm.n,
     tramo,
+    planoClave,
     _px: modalPxPy.px, _py: modalPxPy.py,
   };
   if (capa === "muestreo") {
@@ -1299,7 +1349,15 @@ document.getElementById("mBtnGuardar").addEventListener("click", () => {
   }
   if (modalEditId) {
     const i = state.puntos.findIndex(x => x.id === modalEditId);
-    if (i >= 0) state.puntos[i] = { ...state.puntos[i], ...data };
+    if (i >= 0) {
+      // Al editar, el punto puede estar visible por el toggle "Ver otros niveles" aunque
+      // pertenezca a OTRO plano del que está abierto ahora mismo: no le cambies su tramo/nivel
+      // propio por el del plano que se esté viendo, solo porque se abrió su ficha desde ahí.
+      const original = state.puntos[i];
+      data.tramo = original.tramo;
+      data.planoClave = original.planoClave != null ? original.planoClave : planoClaveDePunto(original);
+      state.puntos[i] = { ...original, ...data };
+    }
   } else {
     data.id = "p" + (state.nextLocalId++);
     data.fecha = new Date().toISOString();
